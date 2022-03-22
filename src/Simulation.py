@@ -67,7 +67,7 @@ st.subheader('Allocation of inital portfolio')
 st.write('**Selection of ETFs**:')
 st.text(ETFs)
 st.write('**Available cash**: ' + str(portfolio_value) + ' USD')
-allocationETFs = st.slider('How much % your initial portfolio should be invested into ETFs?', 0, 100, 70, )
+allocationETFs = st.slider('How much % of your initial portfolio should be invested into ETFs?', 0, 100, 70, )
 allocationETFs = allocationETFs / 100
 
 if 'allocationETFs' not in st.session_state:
