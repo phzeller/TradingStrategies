@@ -1,4 +1,3 @@
-import pickle
 import yfinance as yf  # library to gather financial data from https://finance.yahoo.com/
 import pandas as pd  # fast and powerful data analysis and manipulation tool
 import datetime

@@ -10,37 +10,55 @@ from Strategies.WMA import WMA
 from Strategies.BollingerBands import BollingerBands
 from Strategies.MACD import MACD
 import plotly.express as px
+import yfinance as yf
 
 pd.options.plotting.backend = 'plotly'
+
 
 def simulation(portfolio, cash, end_date, progress_bar):
     ret = {}
 
-    RSI_strategy = RSI(copy.deepcopy(portfolio), copy.deepcopy(cash), copy.deepcopy(portfolio.initial_buy_date), end_date)
+    RSI_strategy = RSI(copy.deepcopy(portfolio), copy.deepcopy(cash), copy.deepcopy(portfolio.initial_buy_date),
+                       end_date)
     ret['RSI'] = RSI_strategy.simulation()
     progress_bar.progress(20)
 
-    SMA_strategy = SMA(copy.deepcopy(portfolio), copy.deepcopy(cash), copy.deepcopy(portfolio.initial_buy_date), end_date)
+    SMA_strategy = SMA(copy.deepcopy(portfolio), copy.deepcopy(cash), copy.deepcopy(portfolio.initial_buy_date),
+                       end_date)
     ret['SMA'] = SMA_strategy.simulation()
     progress_bar.progress(40)
 
-    WMA_strategy = WMA(copy.deepcopy(portfolio), copy.deepcopy(cash), copy.deepcopy(portfolio.initial_buy_date), end_date)
+    WMA_strategy = WMA(copy.deepcopy(portfolio), copy.deepcopy(cash), copy.deepcopy(portfolio.initial_buy_date),
+                       end_date)
     ret['WMA'] = WMA_strategy.simulation()
     progress_bar.progress(60)
 
-    BollingerBands_strategy = BollingerBands(copy.deepcopy(portfolio), copy.deepcopy(cash), copy.deepcopy(portfolio.initial_buy_date), end_date)
+    BollingerBands_strategy = BollingerBands(copy.deepcopy(portfolio), copy.deepcopy(cash),
+                                             copy.deepcopy(portfolio.initial_buy_date), end_date)
     ret['BB'] = BollingerBands_strategy.simulation()
     progress_bar.progress(80)
 
-    MACD_strategy = MACD(copy.deepcopy(portfolio), copy.deepcopy(cash), copy.deepcopy(portfolio.initial_buy_date), end_date)
+    MACD_strategy = MACD(copy.deepcopy(portfolio), copy.deepcopy(cash), copy.deepcopy(portfolio.initial_buy_date),
+                         end_date)
     ret['MACD'] = MACD_strategy.simulation()
     progress_bar.progress(100)
 
     return ret
 
+
 def clear_session_states():
     for fig in ['fig1', 'fig2', 'fig3']:
         st.session_state.pop(fig, None)
+
+
+def get_SPY(start_date, end_date, investment):
+    ticker = yf.Ticker('SPY')
+    history = ticker.history(start=start_date, end=end_date, interval='1d')
+    buy_price = history.iloc[0]['Close']
+    history['Performance'] = history['Close'] / buy_price
+    history['Total Value'] = history['Performance'] * investment
+    return history['Total Value'].reset_index()
+
 
 st.set_page_config(
     page_title="Trading Strategies", page_icon="📈"
@@ -59,7 +77,14 @@ portfolio_value = 1000000
 n_ETFs = len(ETFs)
 buy_date = datetime.date(2016, 1, 1)
 
-st.write('This is a project ...')
+st.write('In this final project, we implemented five different technical analysis strategies in Python. '
+         'Creating a backtesting framework has enabled us to evaluate each strategy’s performance over '
+         'different time horizons. We decided to implement the following five trading strategies:')
+st.write('* Relative Strength Index (RSI): 30, 70\n'
+         '* Simple Moving Average (SMA): 50, 200\n'
+         '* Weighted Moving Average (WMA): 21\n'
+         '* Bollinger Bands (BB): 20\n'
+         '*	Moving Average Convergence Divergence (MACD): 12, 26, 9')
 
 st.write('--------------------------------------')
 
@@ -81,15 +106,15 @@ allocationCash = 1 - allocationETFs
 cash = allocationCash * portfolio_value
 st.write('**Initial portfolio allocation**')
 col1, col2 = st.columns(2)
-col1.metric(label = "ETFs", value = str(int(allocationETFs * 100)) + " %")
-col2.metric(label = "Cash", value = str(int(allocationCash * 100)) + " %")
+col1.metric(label="ETFs", value=str(int(allocationETFs * 100)) + " %")
+col2.metric(label="Cash", value=str(int(allocationCash * 100)) + " %")
 
 st.write('--------------------------------------')
 
 st.subheader('Scenario 1')
 st.caption('Time period: 01.01.2010 - Today')
 
-if st.button('Start simulation', key = 1):
+if st.button('Start simulation', key=1):
     start_date = datetime.date(2010, 1, 1)
     end_date = today
 
@@ -100,6 +125,8 @@ if st.button('Start simulation', key = 1):
         portfolio.buy_portfolio()
     placeholder1.success('Portfolio successfully initialized!')
 
+    SPY = get_SPY(portfolio.initial_buy_date, end_date, portfolio_value)
+
     # Simulating five different trading strategies
     with st.spinner('Simulation is running...'):
         my_bar1 = placeholder1.progress(0)
@@ -107,16 +134,16 @@ if st.button('Start simulation', key = 1):
     placeholder1.success('Simulation successfully finished')
 
     # Collecting backtesting results
-    scenario_1 = [result['RSI']['Date'], result['RSI']['Total Value'], result['SMA']['Total Value'],
+    scenario_1 = [result['RSI']['Date'], SPY['Total Value'], result['RSI']['Total Value'], result['SMA']['Total Value'],
                   result['WMA']['Total Value'], result['BB']['Total Value'], result['MACD']['Total Value']]
-    scenario_1 = pd.concat(scenario_1, axis=1, keys=['Date', 'RSI', 'SMA', 'WMA', 'BollingerBands', 'MACD'])
+    scenario_1 = pd.concat(scenario_1, axis=1, keys=['Date', 'SPY', 'RSI', 'SMA', 'WMA', 'BollingerBands', 'MACD'])
 
     # Visualizing backtesting results
-    fig_1 = px.line(scenario_1, x='Date', y=['RSI', 'SMA', 'WMA', 'BollingerBands', 'MACD'],
+    fig_1 = px.line(scenario_1, x='Date', y=['SPY', 'RSI', 'SMA', 'WMA', 'BollingerBands', 'MACD'],
                     title='Scenario 1: Backtesting results of different technical trading strategies',
                     labels={"variable": "Trading Strategy", "value": "Value of Portfolio"})
-    fig_1.update_yaxes(gridwidth = 0.5, color='#8D8E8E')
-    fig_1.update_xaxes(gridwidth = 0.5, color='#8D8E8E')
+    fig_1.update_yaxes(gridwidth=0.5, color='#8D8E8E')
+    fig_1.update_xaxes(gridwidth=0.5, color='#8D8E8E')
 
     st.session_state['fig1'] = fig_1
 
@@ -128,7 +155,7 @@ st.write('--------------------------------------')
 st.subheader('Scenario 2')
 st.caption('Time period: 01.01.2019 - Today')
 
-if st.button('Start simulation', key = 2):
+if st.button('Start simulation', key=2):
     start_date = datetime.date(2019, 1, 1)
     end_date = today
 
@@ -140,6 +167,8 @@ if st.button('Start simulation', key = 2):
         portfolio.buy_portfolio()
     placeholder2.success('Portfolio successfully initialized!')
 
+    SPY = get_SPY(portfolio.initial_buy_date, end_date, portfolio_value)
+
     # Simulating five different trading strategies
     with st.spinner('Simulation is running...'):
         my_bar2 = placeholder2.progress(0)
@@ -147,12 +176,12 @@ if st.button('Start simulation', key = 2):
     placeholder2.success('Simulation successfully finished')
 
     # Collecting backtesting results
-    scenario_2 = [result['RSI']['Date'], result['RSI']['Total Value'], result['SMA']['Total Value'],
+    scenario_2 = [result['RSI']['Date'], SPY['Total Value'], result['RSI']['Total Value'], result['SMA']['Total Value'],
                   result['WMA']['Total Value'], result['BB']['Total Value'], result['MACD']['Total Value']]
-    scenario_2 = pd.concat(scenario_2, axis=1, keys=['Date', 'RSI', 'SMA', 'WMA', 'BollingerBands', 'MACD'])
+    scenario_2 = pd.concat(scenario_2, axis=1, keys=['Date', 'SPY', 'RSI', 'SMA', 'WMA', 'BollingerBands', 'MACD'])
 
     # Visualizing backtesting results
-    fig_2 = px.line(scenario_2, x='Date', y=['RSI', 'SMA', 'WMA', 'BollingerBands', 'MACD'],
+    fig_2 = px.line(scenario_2, x='Date', y=['SPY', 'RSI', 'SMA', 'WMA', 'BollingerBands', 'MACD'],
                     title='Scenario 2: Backtesting results of different technical trading strategies',
                     labels={"variable": "Trading Strategy", "value": "Value of Portfolio"})
     fig_2.update_yaxes(gridwidth=0.5, color='#8D8E8E')
@@ -163,15 +192,12 @@ if st.button('Start simulation', key = 2):
 if 'fig2' in st.session_state:
     st.plotly_chart(st.session_state['fig2'])
 
-
 st.write('--------------------------------------')
 
 st.subheader('Scenario 3')
 st.caption('Time period: 01.01.2021 - Today')
 
-
-
-if st.button('Start simulation', key = 3):
+if st.button('Start simulation', key=3):
     start_date = datetime.date(2021, 1, 1)
     end_date = today
 
@@ -183,6 +209,8 @@ if st.button('Start simulation', key = 3):
         portfolio.buy_portfolio()
     placeholder3.success('Portfolio successfully initialized!')
 
+    SPY = get_SPY(portfolio.initial_buy_date, end_date, portfolio_value)
+
     # Simulating five different trading strategies
     with st.spinner('Simulation is running...'):
         my_bar3 = placeholder3.progress(0)
@@ -192,16 +220,16 @@ if st.button('Start simulation', key = 3):
     placeholder3.empty()
 
     # Collecting backtesting results
-    scenario_3 = [result['RSI']['Date'], result['RSI']['Total Value'], result['SMA']['Total Value'],
+    scenario_3 = [result['RSI']['Date'], SPY['Total Value'], result['RSI']['Total Value'], result['SMA']['Total Value'],
                   result['WMA']['Total Value'], result['BB']['Total Value'], result['MACD']['Total Value']]
-    scenario_3 = pd.concat(scenario_3, axis=1, keys=['Date', 'RSI', 'SMA', 'WMA', 'BollingerBands', 'MACD'])
+    scenario_3 = pd.concat(scenario_3, axis=1, keys=['Date', 'SPY', 'RSI', 'SMA', 'WMA', 'BollingerBands', 'MACD'])
 
     # Visualizing backtesting results
-    fig_3 = px.line(scenario_3, x='Date', y=['RSI', 'SMA', 'WMA', 'BollingerBands', 'MACD'],
+    fig_3 = px.line(scenario_3, x='Date', y=['SPY', 'RSI', 'SMA', 'WMA', 'BollingerBands', 'MACD'],
                     title='Scenario 3: Backtesting results of different technical trading strategies',
                     labels={"variable": "Trading Strategy", "value": "Value of Portfolio"})
-    fig_3.update_yaxes(gridwidth = 0.5, color='#8D8E8E')
-    fig_3.update_xaxes(gridwidth = 0.5, color='#8D8E8E')
+    fig_3.update_yaxes(gridwidth=0.5, color='#8D8E8E')
+    fig_3.update_xaxes(gridwidth=0.5, color='#8D8E8E')
 
     st.session_state['fig3'] = fig_3
 
